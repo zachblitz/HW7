@@ -56,21 +56,22 @@ except:
 # Note that this is a lot like work you have done already in class (but, depending upon what you did previously, may not be EXACTLY the same, so be careful your code does exactly what you want here).
 
 
-x = input("Write in a Twitter Handle: ")
-def get_user_tweets(x):
+input_handle = input("Enter a Twitter Handle: ")
+def get_user_tweets(input_handle):
+
+	x = 'twitter_{}.'.format(input_handle)
 	if x in CACHE_DICTION:
-		results = CACHE_DICTION[x]
+		return CACHE_DICTION[x]
 
 	else:
-		results = api.search(q = x)
+		results = api.user_timeline(input_handle)
 		CACHE_DICTION[x] = results
-		new_data = open(CACHE_FNAME, 'w')
-		new_data.write(json.dumps(CACHE_DICTION))
-		new_data.close()
 
+		cache_file = open(CACHE_FNAME, 'w')
+		cache_file.write(json.dumps(CACHE_DICTION))
+		cache_file.close()
+		return CACHE_DICTION[x]
 
-	list_of_tweets = results['statuses']
-	return list_of_tweets
 
 
 
@@ -97,52 +98,55 @@ cur.execute(table_spec)
 
 
 # Invoke the function you defined above to get a list that represents a bunch of tweets from the UMSI timeline. Save those tweets in a variable called umsi_tweets.
-umsi_tweets = get_user_tweets("UMSI")
+umsi_tweets = get_user_tweets("umsi")
+
+
 
 
 
 # Use a for loop, the cursor you defined above to execute INSERT statements, that insert the data from each of the tweets in umsi_tweets into the correct columns in each row of the Tweets database table.
-for tweet in umsi_tweets:
-	information = []
-	statement = 'INSERT INTO Tweets VALUES (?,?,?,?,?)'
-	information.append(tweet["id"])
-	information.append(tweet["user"]["screen_name"])
-	information.append(tweet["created_at"])
-	information.append(tweet["text"])
-	information.append(tweet["retweet_count"])
-	cur.execute(statement, information)
-# (You should do nested data investigation on the umsi_tweets value to figure out how to pull out the data correctly!)
 
+# (You should do nested data investigation on the umsi_tweets value to figure out how to pull out the data correctly!)
+statement = 'INSERT INTO Tweets VALUES (?,?,?,?,?)'
+for x in umsi_tweets:
+	values = (x['id'],x['user']['screen_name'],x['created_at'],x['text'],x['retweet_count'])
+	cur.execute(statement,values)
 
 
 
 # Use the database connection to commit the changes to the database
 
-
+conn.commit()
 
 # You can check out whether it worked in the SQLite browser! (And with the tests.)
 
 
 
-## [PART 2] - SQL statements
+# [PART 2] - SQL statements
 
-## In this part of the homework, you will write a number of Python/SQL statements to get data from the database, as directed. For each direction, write Python code that includes an SQL statement that will get the data from your database. 
-## You can verify whether your SQL statements work correctly in the SQLite browser! (And with the tests)
+# In this part of the homework, you will write a number of Python/SQL statements to get data from the database, as directed. For each direction, write Python code that includes an SQL statement that will get the data from your database. 
+# You can verify whether your SQL statements work correctly in the SQLite browser! (And with the tests)
 
 
-# Select from the database all of the TIMES the tweets you collected were posted and fetch all the tuples that contain them in to the variable tweet_posted_times.
-
+#Select from the database all of the TIMES the tweets you collected were posted and fetch all the tuples that contain them in to the variable tweet_posted_times.
+times_statement = 'SELECT time_posted FROM Tweets'
+cur.execute(times_statement)
+tweet_posted_times = cur.fetchall()
 
 # Select all of the tweets (the full rows/tuples of information) that have been retweeted MORE than 2 times, and fetch them into the variable more_than_2_rts.
-
+retweet_statement = 'SELECT * FROM Tweets WHERE retweets > 2'
+cur.execute(retweet_statement)
+more_than_2_rts = cur.fetchall()
 
 
 # Select all of the TEXT values of the tweets that are retweets of another account (i.e. have "RT" at the beginning of the tweet text). Save the FIRST ONE from that group of text values in the variable first_rt. Note that first_rt should contain a single string value, not a tuple.
-
+retweet_statement = 'SELECT tweet_text FROM Tweets WHERE tweet_text LIKE "RT%"'
+cur.execute(retweet_statement)
+first_rt = cur.fetchone()[0]
 
 
 # Finally, done with database stuff for a bit: write a line of code to close the cursor to the database.
-
+conn.close()
 
 
 ## [PART 3] - Processing data
@@ -158,7 +162,12 @@ for tweet in umsi_tweets:
 # Also note that the SET type is what this function should return, NOT a list or tuple. We looked at very briefly at sets when we looked at set comprehensions last week. In a Python 3 set, which is a special data type, it's a lot like a combination of a list and a dictionary: no key-value pairs, BUT each element in a set is by definition unique. You can't have duplicates.
 
 # If you want to challenge yourself here -- this function definition (what goes under the def statement) CAN be written in one line! Definitely, definitely fine to write it with multiple lines, too, which will be much easier and clearer.
-
+def get_twitter_users(x):
+	twitter_accounts = re.findall("@[A-z0-9_]*", x)
+	all_screennames = []
+	for account in twitter_accounts:
+		all_screennames.append(account[1:])
+	return set(all_screennames)
 
 
 
